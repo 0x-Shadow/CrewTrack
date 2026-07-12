@@ -88,7 +88,7 @@ Small businesses with temporary workers track attendance on paper or from memory
 
 ## Hardware
 
-Total cost: **~€15**
+Total cost: **~€40-50** (first build, includes shipping)
 
 | Component | Model | Cost |
 |-----------|-------|------|
