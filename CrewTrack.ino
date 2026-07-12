@@ -528,7 +528,7 @@ function la(){api('/api/attendance').then(d=>{var l=document.getElementById('al'
 function ls(){var now=new Date();api('/api/monthly',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({month:now.getMonth()+1,year:now.getFullYear()})}).then(d=>{var l=document.getElementById('sl'),tot=0;l.innerHTML='';d.forEach(s=>{tot+=s.salary;var p=s.days>0?Math.min((s.days/22)*100,100):0;l.innerHTML+='<li class="wi" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between"><span class="wn">'+s.name+'</span><span class="ws">'+s.salary.toFixed(2)+'E</span></div><div class="wm">'+s.days+' days x '+s.wage+'E</div><div class="bar"><div class="bf" style="width:'+p+'%"></div></div></li>';});l.innerHTML+='<li class="wi" style="border-top:2px solid #10b981"><span class="wn">TOTAL</span><span class="ws" style="font-size:1.2rem">'+tot.toFixed(2)+'E</span></li>';});}
 function dlCSV(){window.open('/api/export/csv','_blank');}
 function settime(){var d=parseInt(document.getElementById('td').value),m=parseInt(document.getElementById('tm').value),y=parseInt(document.getElementById('ty').value),h=parseInt(document.getElementById('th').value),mi=parseInt(document.getElementById('tmi').value);if(!d||!m||!y){toast('Fill date fields');return;}api('/api/settime',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day:d,month:m,year:y,hour:h||0,minute:mi||0})}).then(r=>{if(r.ok)toast('Time: '+r.date+' '+r.time);else toast('Error: '+r.error);});}
-function lt(){api('/api/status').then(d=>{var n=new Date();document.getElementById('td').value=n.getDate();document.getElementById('tm').value=n.getMonth()+1;document.getElementById('ty').value=n.getFullYear();document.getElementById('th').value=n.getHours();document.getElementById('tmi').value=n.getMinutes();});}
+function lt(){api('/api/status').then(d=>{if(d.timeSet){var p=d.date.split('_');document.getElementById('td').value=parseInt(p[2]);document.getElementById('tm').value=parseInt(p[1]);document.getElementById('ty').value=parseInt(p[0]);var t=d.time.split(':');document.getElementById('th').value=parseInt(t[0]);document.getElementById('tmi').value=parseInt(t[1]);}else{var n=new Date();document.getElementById('td').value=n.getDate();document.getElementById('tm').value=n.getMonth()+1;document.getElementById('ty').value=n.getFullYear();document.getElementById('th').value=n.getHours();document.getElementById('tmi').value=n.getMinutes();}});}
 ld();
 </script>
 </body>
@@ -573,8 +573,9 @@ void handleAPIDashboard() {
 
 void handleAPIEmployees() {
     struct tm t;
-    int curMonth = (getLocalTime(&t)) ? (t.tm_mon + 1) : 7;
-    int curYear = (getLocalTime(&t)) ? (t.tm_year + 1900) : 2026;
+    bool gotTime = getLocalTime(&t);
+    int curMonth = gotTime ? (t.tm_mon + 1) : 7;
+    int curYear = gotTime ? (t.tm_year + 1900) : 2026;
 
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
