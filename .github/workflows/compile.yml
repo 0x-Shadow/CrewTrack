@@ -32,4 +32,4 @@ jobs:
 
       - name: Compile
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32dev --verbose CrewTrack.ino
+          arduino-cli compile --fqbn esp32:esp32:esp32 --verbose CrewTrack.ino
