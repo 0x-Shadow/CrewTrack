@@ -7,36 +7,15 @@
   <img src="https://img.shields.io/badge/Platform-ESP32-000?logo=espressif" />
   <img src="https://img.shields.io/badge/Language-C++-00599C?logo=cplusplus" />
   <img src="https://img.shields.io/badge/License-MIT-green" />
-  <img src="https://img.shields.io/badge/Status-ActiveDevelopment-orange" />
+  <img src="https://img.shields.io/badge/Status-Working-orange" />
 </p>
 
 <h1 align="center">CrewTrack</h1>
 
 <p align="center">
-  <b>Open Source RFID Attendance System for Small Work Crews</b><br>
-  <sub>For electricians, plumbers, HVAC techs, painters, builders, and any crew with 2-20 workers</sub>
+  <b>RFID Attendance for Work Vans</b><br>
+  <sub>Know who worked, how many days, and with whom — every month, automatically</sub>
 </p>
-
----
-
-## Status
-
-🚧 **Under active development**
-
-| Component | Status |
-|-----------|--------|
-| RFID scanning | ✅ Working |
-| LCD display | ✅ Working |
-| SD card logging | ✅ Working |
-| WiFi dashboard | ✅ Working |
-| Employee management | ✅ Working |
-| Salary calculator | ✅ Working |
-| CSV export | ✅ Working |
-| Hardware integration | 🔄 Testing |
-| GPS tracking | 🔲 Planned |
-| Mobile app | 🔲 Planned |
-
-> The firmware and dashboard are fully implemented. Hardware integration is being tested and debugged. See [Roadmap](#roadmap) for details.
 
 ---
 
@@ -46,16 +25,11 @@
 > *"Did Nikos work 8 or 10 days?"*
 > *"How much should I pay Kostas?"*
 
-Small businesses with temporary workers track attendance on paper or from memory. At month-end, nobody remembers the exact numbers.
-
-**CrewTrack also works as:**
-- 🔥 **Fire register** — know who's on-site at any time
-- 🚐 **Crew tracker** — who boarded the van this morning
-- 📋 **Site safety log** — proof of attendance for contractors
+You run a small crew. Workers come and go. At month-end, nobody remembers the exact numbers. Paper sheets get lost. Memory fails. Pay gets argued about.
 
 ## The Solution
 
-**CrewTrack** is a standalone device. Every assistant has an RFID card. Every morning, tap each card before leaving for work. The device handles the rest.
+**CrewTrack** goes in the van. Every morning, each worker taps their RFID card before leaving for work. At month-end, open the dashboard — it shows exactly who worked how many days and how much to pay.
 
 ```
 ┌─────────────────────────────┐
@@ -70,24 +44,26 @@ Small businesses with temporary workers track attendance on paper or from memory
 └─────────────────────────────┘
 ```
 
+**No internet required.** No cloud. No subscription. Just tap and go.
+
 ---
 
 ## Features
 
 | Feature | Description |
 |---------|-------------|
-| **RFID Tap-In** | Workers tap their card. Attendance logged instantly. |
-| **Duplicate Detection** | Won't double-count same-day scans. |
+| **RFID Tap-In** | Workers tap their card each morning. Logged instantly. |
+| **Duplicate Detection** | Won't double-count if someone taps twice. |
 | **Unknown Card Alert** | Flags unregistered cards immediately. |
-| **LCD Display** | 2" ST7789 shows scan results in real-time. |
-| **Audio Feedback** | Buzzer confirms each scan. |
-| **SD Card Storage** | One CSV file per day. No internet required. |
+| **LCD Display** | 2" screen shows scan result in real-time. |
+| **Audio Feedback** | Buzzer confirms each tap. |
+| **SD Card Storage** | One CSV file per day. Your data stays local. |
 | **WiFi Dashboard** | Connect your phone to manage everything. |
-| **Employee Management** | Add, edit, delete employees from your phone. |
+| **Employee Management** | Add, edit, delete workers from your phone. |
 | **Monthly Salary** | Days worked × daily wage. Automatic. |
 | **CSV Export** | Download full attendance history. |
 | **Search & Filter** | Find any worker by name or UID. |
-| **Manual Time Set** | Set clock from dashboard when no internet available. |
+| **Manual Time Set** | Set clock from dashboard (no internet needed). |
 
 ---
 
@@ -142,8 +118,8 @@ See [BOM.md](BOM.md) for full shopping list with links.
 | RST | GPIO 22 |
 | 3.3V / GND | 3.3V / GND |
 | **ST7789V LCD** | |
-| SCL (CLK) | GPIO 18 |
-| SDA (MOSI) | GPIO 23 |
+| SCK (CLK) | GPIO 18 |
+| MOSI (SDA) | GPIO 23 |
 | CS | GPIO 15 |
 | DC | GPIO 2 |
 | RST | GPIO 4 |
@@ -191,7 +167,8 @@ Open `CrewTrack.ino` → **ESP32 Dev Module** → Upload
 1. Power on device
 2. Connect phone to WiFi: **`CrewTrack`** / **`12345678`**
 3. Open browser: **`192.168.4.1`**
-4. Add employees, scan cards, done
+4. Set date/time on Time tab (no internet available)
+5. Add workers, scan cards, done
 
 ---
 
@@ -204,7 +181,7 @@ Connect to the device's WiFi and open `192.168.4.1`:
 │              CREWTRACK                   │
 ├──────────────────────────────────────────┤
 │  [Dashboard] [Workers] [Attendance]      │
-│  [Salary]    [+ Add]                     │
+│  [Salary]    [+ Add]  [Time]             │
 │                                          │
 │  ┌──────┐  ┌──────┐  ┌──────┐           │
 │  │  3   │  │  5   │  │07:36 │           │
@@ -226,12 +203,38 @@ Connect to the device's WiFi and open `192.168.4.1`:
 - **Attendance** — Full scan history
 - **Salary** — Monthly report with progress bars
 - **+ Add** — Register new employees
+- **Time** — Set date/time manually (no internet needed)
+
+---
+
+## How It Works
+
+```
+  ┌──────────┐     ┌──────────┐     ┌──────────┐
+  │ Worker   │────▶│  RFID    │────▶│  ESP32   │
+  │ taps card│     │  RC522   │     │          │
+  └──────────┘     └──────────┘     └────┬─────┘
+                                         │
+                    ┌────────────────────┤
+                    │                    │
+                    ▼                    ▼
+              ┌──────────┐        ┌──────────┐
+              │   LCD    │        │ SD Card  │
+              │ Display  │        │  Log CSV │
+              └──────────┘        └──────────┘
+                    │
+                    ▼
+              ┌──────────┐        ┌──────────┐
+              │  Buzzer  │        │  WiFi    │
+              │  Beep!   │        │Dashboard │
+              └──────────┘        └──────────┘
+```
 
 ---
 
 ## Roadmap
 
-### ✅ Completed
+### ✅ Working
 - RFID card scanning with RC522
 - ST7789V LCD display (4 screens)
 - SD card CSV logging
@@ -242,34 +245,24 @@ Connect to the device's WiFi and open `192.168.4.1`:
 - CSV export
 - Duplicate scan detection
 - Search & filter workers
+- Manual time set via dashboard
 
 ### 🔄 In Progress
 - Hardware integration testing
 - Reliable SD card detection
-- **Manual time set** via dashboard (NTP unavailable in AP mode)
 - Power management (car USB / battery)
 - Enclosure design
 
-### 🔲 Planned — Storage
-- **FRAM module** (FM24C256) — unlimited writes, non-volatile, replaces SD for critical data
-- **LittleFS** — ESP32 internal flash as SD fallback (100k writes)
-- **Optional WiFi station mode** — sync attendance to remote DB (Postgres/SQLite) when internet available
-- **LoRa mesh** (SX1262) — off-grid sync between multiple devices
-
-### 🔲 Planned — Interface
-- **BLE passive detection** — employees wear BLE beacons, auto-registered, no tap needed
-- **Fire register mode** — dashboard shows who's on-site in real-time
-- **Clock-out tracking** — track hours, not just days
-- OTA firmware updates
-- Multi-language support
-
-### 🔲 Planned — Other
+### 🔲 Planned
+- FRAM module (replaces SD for critical data)
+- BLE passive detection (no tap needed)
+- Clock-out tracking (hours, not just days)
+- Multiple van support
 - GPS tracking (GY-NEO6MV2)
-- RTC module for offline time
-- Multiple vehicle support
-- Mobile app (React Native)
-- Admin login / password protection
-- PDF report generation
+- RTC module for accurate offline time
+- Mobile app
+- Admin password protection
+- OTA firmware updates
 
 ---
 
@@ -291,31 +284,6 @@ CrewTrack/
     ├── ISSUE_TEMPLATE/        Bug report & feature request forms
     └── workflows/
         └── compile.yml        CI - compiles on every push
-```
-
----
-
-## How It Works
-
-```
-  ┌──────────┐     ┌──────────┐     ┌──────────┐
-  │ Employee │────▶│  RFID    │────▶│  ESP32   │
-  │ taps card│     │  RC522   │     │          │
-  └──────────┘     └──────────┘     └────┬─────┘
-                                         │
-                    ┌────────────────────┤
-                    │                    │
-                    ▼                    ▼
-              ┌──────────┐        ┌──────────┐
-              │   LCD    │        │ SD Card  │
-              │ Display  │        │  Log CSV │
-              └──────────┘        └──────────┘
-                    │
-                    ▼
-              ┌──────────┐        ┌──────────┐
-              │  Buzzer  │        │  WiFi    │
-              │  Beep!   │        │Dashboard │
-              └──────────┘        └──────────┘
 ```
 
 ---
@@ -342,5 +310,5 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 <p align="center">
   Built with ESP32 + Arduino<br>
-  <sub>Star this repo if it helps your business ⭐</sub>
+  <sub>Star this repo if it helps your crew ⭐</sub>
 </p>

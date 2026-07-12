@@ -52,6 +52,8 @@ struct Employee {
 Employee employees[MAX_EMPLOYEES];
 int employeeCount = 0;
 bool sdReady = false;
+bool timeSet = false;
+unsigned long lastScanTime = 0;
 
 // ======================== RFID ========================
 String rfidScan() {
@@ -125,9 +127,11 @@ void showReady() {
     tft.drawString("Ready", 120, 70);
     tft.setTextSize(1);
     tft.drawString("Scan Employee Card", 120, 120);
+    tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+    tft.drawString(getDisplayDate() + "  " + currentTime, 120, 170);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.drawString("WiFi: " + String(WIFI_SSID), 120, 175);
-    tft.drawString("192.168.4.1", 120, 192);
+    tft.drawString("WiFi: " + String(WIFI_SSID), 120, 200);
+    tft.drawString("192.168.4.1", 120, 215);
 }
 
 void showSuccess(String name) {
@@ -306,7 +310,10 @@ bool addEmployee(String uid, String name, float wage, String phone) {
 bool removeEmployee(String uid) {
     for (int i = 0; i < employeeCount; i++) {
         if (employees[i].uid == uid) {
-            employees[i].active = false;
+            for (int j = i; j < employeeCount - 1; j++) {
+                employees[j] = employees[j + 1];
+            }
+            employeeCount--;
             return saveEmployees();
         }
     }
@@ -395,6 +402,8 @@ void handleAPIToday();
 void handleAPIMonthly();
 void handleAPIAttendance();
 void handleAPIExportCSV();
+void handleAPISetTime();
+void handleAPIStatus();
 
 const char PAGE_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -449,6 +458,7 @@ body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-heig
 <button onclick="st('att')">Attendance</button>
 <button onclick="st('sal')">Salary</button>
 <button onclick="st('add')">+ Add</button>
+<button onclick="st('time')">Time</button>
 </div>
 <div class="ct">
 <div id="t-dash" class="tc active">
@@ -487,10 +497,20 @@ body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-heig
 <button class="btn bd" onclick="re()">Delete</button></div>
 </div>
 </div>
+<div id="t-time" class="tc">
+<div class="card"><h2>Set Date & Time</h2>
+<div style="margin-bottom:8px;color:#94a3b8;font-size:.85rem">No internet — set manually if timestamps are wrong</div>
+<div class="fg"><label>Day</label><input type="number" id="td" min="1" max="31"></div>
+<div class="fg"><label>Month</label><input type="number" id="tm" min="1" max="12"></div>
+<div class="fg"><label>Year</label><input type="number" id="ty" min="2024" max="2099"></div>
+<div class="fg"><label>Hour (0-23)</label><input type="number" id="th" min="0" max="23"></div>
+<div class="fg"><label>Minute</label><input type="number" id="tmi" min="0" max="59"></div>
+<button class="btn bp" onclick="settime()">Set Time</button>
+</div></div>
 <div id="toast" class="toast" style="display:none"></div>
 <script>
 let AW=[];
-function st(t){document.querySelectorAll('.tc').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('t-'+t).classList.add('active');document.querySelectorAll('.nav button').forEach(b=>{if(b.textContent.toLowerCase().includes(t)||(t==='add'&&b.textContent.includes('+')))b.classList.add('active')});if(t==='dash')ld();if(t==='wkr')lw();if(t==='att')la();if(t==='sal')ls();}
+function st(t){document.querySelectorAll('.tc').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('t-'+t).classList.add('active');document.querySelectorAll('.nav button').forEach(b=>{if(b.textContent.toLowerCase().includes(t)||(t==='add'&&b.textContent.includes('+')))b.classList.add('active')});if(t==='dash')ld();if(t==='wkr')lw();if(t==='att')la();if(t==='sal')ls();if(t==='time')lt();}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
 function api(u,o){return fetch(u,o).then(r=>r.json());}
 function ld(){
@@ -507,6 +527,8 @@ function re(){var u=document.getElementById('eu').value;if(!confirm('Delete?'))r
 function la(){api('/api/attendance').then(d=>{var l=document.getElementById('al');l.innerHTML='';(d||[]).reverse().forEach(r=>{l.innerHTML+='<li class="wi"><div><span class="wn">'+r.name+'</span><div class="wm">'+r.uid+'</div></div><span class="wm">'+r.date+' '+r.time+'</span></li>';});});}
 function ls(){var now=new Date();api('/api/monthly',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({month:now.getMonth()+1,year:now.getFullYear()})}).then(d=>{var l=document.getElementById('sl'),tot=0;l.innerHTML='';d.forEach(s=>{tot+=s.salary;var p=s.days>0?Math.min((s.days/22)*100,100):0;l.innerHTML+='<li class="wi" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between"><span class="wn">'+s.name+'</span><span class="ws">'+s.salary.toFixed(2)+'E</span></div><div class="wm">'+s.days+' days x '+s.wage+'E</div><div class="bar"><div class="bf" style="width:'+p+'%"></div></div></li>';});l.innerHTML+='<li class="wi" style="border-top:2px solid #10b981"><span class="wn">TOTAL</span><span class="ws" style="font-size:1.2rem">'+tot.toFixed(2)+'E</span></li>';});}
 function dlCSV(){window.open('/api/export/csv','_blank');}
+function settime(){var d=parseInt(document.getElementById('td').value),m=parseInt(document.getElementById('tm').value),y=parseInt(document.getElementById('ty').value),h=parseInt(document.getElementById('th').value),mi=parseInt(document.getElementById('tmi').value);if(!d||!m||!y){toast('Fill date fields');return;}api('/api/settime',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day:d,month:m,year:y,hour:h||0,minute:mi||0})}).then(r=>{if(r.ok)toast('Time: '+r.date+' '+r.time);else toast('Error: '+r.error);});}
+function lt(){api('/api/status').then(d=>{var n=new Date();document.getElementById('td').value=n.getDate();document.getElementById('tm').value=n.getMonth()+1;document.getElementById('ty').value=n.getFullYear();document.getElementById('th').value=n.getHours();document.getElementById('tmi').value=n.getMinutes();});}
 ld();
 </script>
 </body>
@@ -527,6 +549,8 @@ void setupWebServer() {
     server->on("/api/monthly", HTTP_POST, handleAPIMonthly);
     server->on("/api/attendance", HTTP_GET, handleAPIAttendance);
     server->on("/api/export/csv", HTTP_GET, handleAPIExportCSV);
+    server->on("/api/settime", HTTP_POST, handleAPISetTime);
+    server->on("/api/status", HTTP_GET, handleAPIStatus);
 
     server->begin();
 }
@@ -548,6 +572,10 @@ void handleAPIDashboard() {
 }
 
 void handleAPIEmployees() {
+    struct tm t;
+    int curMonth = (getLocalTime(&t)) ? (t.tm_mon + 1) : 7;
+    int curYear = (getLocalTime(&t)) ? (t.tm_year + 1900) : 2026;
+
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
     for (int i = 0; i < employeeCount; i++) {
@@ -557,7 +585,7 @@ void handleAPIEmployees() {
         obj["name"] = employees[i].name;
         obj["wage"] = employees[i].dailyWage;
         obj["phone"] = employees[i].phone;
-        obj["daysWorked"] = getDaysWorked(employees[i].uid, 7, 2026);
+        obj["daysWorked"] = getDaysWorked(employees[i].uid, curMonth, curYear);
     }
     String out;
     serializeJson(doc, out);
@@ -577,6 +605,10 @@ void handleAPIAddEmployee() {
     String phone = doc["phone"] | "";
     if (uid.length() == 0 || name.length() == 0) {
         server->send(400, "application/json", "{\"error\":\"Missing fields\"}");
+        return;
+    }
+    if (uid.indexOf(',') >= 0 || uid.indexOf('\n') >= 0 || uid.indexOf('"') >= 0) {
+        server->send(400, "application/json", "{\"error\":\"Invalid UID\"}");
         return;
     }
     if (addEmployee(uid, name, wage, phone))
@@ -742,6 +774,63 @@ void handleAPIExportCSV() {
     server->send(200, "text/csv", csv);
 }
 
+void handleAPISetTime() {
+    String body = server->arg("plain");
+    JsonDocument doc;
+    if (deserializeJson(doc, body)) {
+        server->send(400, "application/json", "{\"error\":\"Bad JSON\"}");
+        return;
+    }
+    int day = doc["day"] | 1;
+    int month = doc["month"] | 1;
+    int year = doc["year"] | 2026;
+    int hour = doc["hour"] | 0;
+    int minute = doc["minute"] | 0;
+
+    if (month < 1 || month > 12 || day < 1 || day > 31 || year < 2024 || year > 2099) {
+        server->send(400, "application/json", "{\"error\":\"Invalid date\"}");
+        return;
+    }
+
+    char dateBuf[16];
+    sprintf(dateBuf, "%d_%02d_%02d", year, month, day);
+    currentDate = String(dateBuf);
+
+    char timeBuf[8];
+    sprintf(timeBuf, "%02d:%02d", hour, minute);
+    currentTime = String(timeBuf);
+
+    timeSet = true;
+    showReady();
+
+    JsonDocument resp;
+    resp["ok"] = true;
+    resp["date"] = currentDate;
+    resp["time"] = currentTime;
+    String out;
+    serializeJson(resp, out);
+    server->send(200, "application/json", out);
+
+    Serial.print("Time set: ");
+    Serial.print(currentDate);
+    Serial.print(" ");
+    Serial.println(currentTime);
+}
+
+void handleAPIStatus() {
+    JsonDocument doc;
+    doc["date"] = currentDate;
+    doc["time"] = currentTime;
+    doc["timeSet"] = timeSet;
+    doc["sdReady"] = sdReady;
+    doc["employeeCount"] = employeeCount;
+    doc["ip"] = WiFi.softAPIP().toString();
+    doc["uptime"] = millis() / 1000;
+    String out;
+    serializeJson(doc, out);
+    server->send(200, "application/json", out);
+}
+
 // ======================== SETUP ========================
 void setup() {
     Serial.begin(115200);
@@ -781,7 +870,7 @@ void setup() {
     Serial.println("6. WiFi OK");
 
     configTime(GMT_OFFSET_SEC, DST_OFFSET_SEC, NTP_SERVER);
-    delay(1000);
+    delay(2000);
 
     currentDate = getDate();
     currentTime = getTimeStr();
@@ -791,6 +880,10 @@ void setup() {
 
     showReady();
     Serial.println("7. CrewTrack ready!");
+    Serial.print("   Date: ");
+    Serial.print(currentDate);
+    Serial.print(" Time: ");
+    Serial.println(currentTime);
 }
 
 // ======================== LOOP ========================
@@ -810,6 +903,10 @@ void loop() {
 
     String uid = rfidScan();
     if (uid.length() == 0) return;
+
+    unsigned long now = millis();
+    if (now - lastScanTime < DEBOUNCE_MS) return;
+    lastScanTime = now;
 
     currentTime = getTimeStr();
     Serial.print("Scanned: ");
@@ -833,6 +930,4 @@ void loop() {
         showUnknown(uid);
         Serial.println("Unknown card");
     }
-
-    delay(500);
 }
