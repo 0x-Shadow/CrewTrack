@@ -27,8 +27,8 @@ jobs:
 
       - name: Configure TFT_eSPI
         run: |
-          cp CrewTrack/TFT_eSPI_User_Setup.h "$HOME/Arduino/libraries/TFT_eSPI/User_Setup.h"
+          cp TFT_eSPI_User_Setup.h "$HOME/Arduino/libraries/TFT_eSPI/User_Setup.h"
 
       - name: Compile
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32dev --verbose CrewTrack/CrewTrack.ino
+          arduino-cli compile --fqbn esp32:esp32:esp32dev --verbose CrewTrack.ino
