@@ -28,9 +28,6 @@
 #define DEBOUNCE_MS         2000
 #define EMPLOYEES_FILE      "/employees.json"
 #define ATTENDANCE_DIR      "/attendance"
-#define NTP_SERVER          "pool.ntp.org"
-#define GMT_OFFSET_SEC      10800
-#define DST_OFFSET_SEC      0
 
 // ======================== GLOBALS ========================
 MFRC522 rfid(RFID_SS, RFID_RST);
@@ -73,7 +70,11 @@ String rfidScan() {
 // ======================== BUZZER ========================
 void beep(int ms) {
     digitalWrite(BUZZER, HIGH);
-    delay(ms);
+    unsigned long start = millis();
+    while (millis() - start < (unsigned long)ms) {
+        yield();
+        delay(1);
+    }
     digitalWrite(BUZZER, LOW);
 }
 
@@ -85,6 +86,7 @@ void beepDouble() {
 
 // ======================== TIME ========================
 String getDate() {
+    if (timeSet) return currentDate;
     struct tm t;
     if (!getLocalTime(&t)) return "2026_07_12";
     char buf[16];
@@ -93,6 +95,7 @@ String getDate() {
 }
 
 String getTimeStr() {
+    if (timeSet) return currentTime;
     struct tm t;
     if (!getLocalTime(&t)) return "??:??";
     char buf[8];
@@ -101,6 +104,17 @@ String getTimeStr() {
 }
 
 String getDisplayDate() {
+    if (timeSet) {
+        struct tm t;
+        memset(&t, 0, sizeof(t));
+        if (sscanf(currentDate.c_str(), "%d_%d_%d", &t.tm_year, &t.tm_mon, &t.tm_mday) == 3) {
+            const char *m[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+            char buf[32];
+            sprintf(buf, "%02d %s %d", t.tm_mday, m[t.tm_mon - 1], t.tm_year);
+            return String(buf);
+        }
+        return currentDate;
+    }
     struct tm t;
     if (!getLocalTime(&t)) return "12 Jul 2026";
     const char *m[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
@@ -272,7 +286,7 @@ bool saveEmployees() {
     JsonArray arr = doc.to<JsonArray>();
     for (int i = 0; i < employeeCount; i++) {
         if (!employees[i].active) continue;
-        JsonObject obj = arr.createNestedObject();
+        JsonObject obj = arr.add<JsonObject>();
         obj["uid"] = employees[i].uid;
         obj["name"] = employees[i].name;
         obj["wage"] = employees[i].dailyWage;
@@ -581,7 +595,7 @@ void handleAPIEmployees() {
     JsonArray arr = doc.to<JsonArray>();
     for (int i = 0; i < employeeCount; i++) {
         if (!employees[i].active) continue;
-        JsonObject obj = arr.createNestedObject();
+        JsonObject obj = arr.add<JsonObject>();
         obj["uid"] = employees[i].uid;
         obj["name"] = employees[i].name;
         obj["wage"] = employees[i].dailyWage;
@@ -647,7 +661,7 @@ void handleAPIToday() {
     JsonDocument doc;
     doc["date"] = currentDate;
     doc["count"] = countToday(currentDate);
-    JsonArray arr = doc.createNestedArray("records");
+    JsonArray arr = doc["records"].to<JsonArray>();
     String data = readAll(attPath(currentDate));
     int idx = 0;
     while (idx < (int)data.length()) {
@@ -661,7 +675,7 @@ void handleAPIToday() {
             String uid = line.substring(0, c);
             String time = line.substring(c + 1);
             Employee *emp = findByUID(uid);
-            JsonObject obj = arr.createNestedObject();
+            JsonObject obj = arr.add<JsonObject>();
             obj["uid"] = uid;
             obj["name"] = emp ? emp->name : "Unknown";
             obj["time"] = time;
@@ -684,7 +698,7 @@ void handleAPIMonthly() {
     for (int i = 0; i < employeeCount; i++) {
         if (!employees[i].active) continue;
         int days = getDaysWorked(employees[i].uid, month, year);
-        JsonObject obj = arr.createNestedObject();
+        JsonObject obj = arr.add<JsonObject>();
         obj["uid"] = employees[i].uid;
         obj["name"] = employees[i].name;
         obj["days"] = days;
@@ -723,7 +737,7 @@ void handleAPIAttendance() {
                         String uid = line.substring(0, c);
                         String time = line.substring(c + 1);
                         Employee *emp = findByUID(uid);
-                        JsonObject obj = arr.createNestedObject();
+                        JsonObject obj = arr.add<JsonObject>();
                         obj["uid"] = uid;
                         obj["name"] = emp ? emp->name : "Unknown";
                         obj["date"] = date;
@@ -870,11 +884,9 @@ void setup() {
     setupWebServer();
     Serial.println("6. WiFi OK");
 
-    configTime(GMT_OFFSET_SEC, DST_OFFSET_SEC, NTP_SERVER);
-    delay(2000);
-
     currentDate = getDate();
     currentTime = getTimeStr();
+    Serial.println("6b. Set time via dashboard: 192.168.4.1 -> Time tab");
 
     Serial.print("WiFi IP: ");
     Serial.println(WiFi.softAPIP());
@@ -894,8 +906,10 @@ void loop() {
     static unsigned long lastClock = 0;
     if (millis() - lastClock > 30000) {
         lastClock = millis();
-        currentDate = getDate();
-        currentTime = getTimeStr();
+        if (!timeSet) {
+            currentDate = getDate();
+            currentTime = getTimeStr();
+        }
     }
 
     if (currentScreen != SCREEN_READY && (millis() - screenChangeTime > SCREEN_TIMEOUT_MS)) {
