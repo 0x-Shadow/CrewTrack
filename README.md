@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="CrewTrack.png" alt="CrewTrack Banner" width="100%" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Platform-ESP32-blue?logo=espressif" />
   <img src="https://img.shields.io/badge/Language-C++-00599C?logo=cplusplus" />
   <img src="https://img.shields.io/badge/License-MIT-green" />
