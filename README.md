@@ -13,8 +13,8 @@
 <h1 align="center">CrewTrack</h1>
 
 <p align="center">
-  <b>RFID Attendance for Work Vans</b><br>
-  <sub>Know who worked, how many days, and with whom — every month, automatically</sub>
+  <b>Simple Offline Attendance for Small Work Crews</b><br>
+  <sub>Know who worked, how many days, and how much to pay — every month</sub>
 </p>
 
 ---
@@ -22,10 +22,9 @@
 ## The Problem
 
 > *"How many days did George work this month?"*
-> *"Did Nikos work 8 or 10 days?"*
 > *"How much should I pay Kostas?"*
 
-You run a small crew. Workers come and go. At month-end, nobody remembers the exact numbers. Paper sheets get lost. Memory fails. Pay gets argued about.
+You run a small crew. Workers come and go. At month-end, nobody remembers the exact numbers. Paper sheets get lost. Memory fails.
 
 ## The Solution
 
@@ -44,7 +43,7 @@ You run a small crew. Workers come and go. At month-end, nobody remembers the ex
 └─────────────────────────────┘
 ```
 
-**No internet required.** No cloud. No subscription. Just tap and go.
+No internet required. No cloud. No subscription. Just tap and go.
 
 ---
 
@@ -60,7 +59,7 @@ You run a small crew. Workers come and go. At month-end, nobody remembers the ex
 | **SD Card Storage** | One CSV file per day. Your data stays local. |
 | **WiFi Dashboard** | Connect your phone to manage everything. |
 | **Employee Management** | Add, edit, delete workers from your phone. |
-| **Monthly Salary** | Days worked × daily wage. Automatic. |
+| **Monthly Summary** | Days worked × daily wage. Simple estimate. |
 | **CSV Export** | Download full attendance history. |
 | **Search & Filter** | Find any worker by name or UID. |
 | **Manual Time Set** | Set clock from dashboard (no internet needed). |
@@ -234,35 +233,32 @@ Connect to the device's WiFi and open `192.168.4.1`:
 
 ## Roadmap
 
-### ✅ Working
-- RFID card scanning with RC522
-- ST7789V LCD display (4 screens)
-- SD card CSV logging
-- Buzzer audio feedback
-- WiFi AP + web dashboard
-- Employee CRUD (add/edit/delete)
-- Monthly salary calculation
+### v1.0 — Current
+- RFID card scanning
+- LCD display with scan feedback
+- SD card attendance logging
+- Buzzer confirmation
+- WiFi dashboard (phone)
+- Employee management (add/edit/delete)
+- Monthly summary (days × daily wage)
 - CSV export
 - Duplicate scan detection
-- Search & filter workers
-- Manual time set via dashboard
 
-### 🔄 In Progress
-- Hardware integration testing
-- Reliable SD card detection
-- Power management (car USB / battery)
-- Enclosure design
+### v1.1 — Next
+- Tap In / Tap Out (hours worked)
+- Hours-based monthly report
 
-### 🔲 Planned
-- FRAM module (replaces SD for critical data)
+### v1.2 — Later
+- Multiple job sites / project selection
+- Overtime tracking
+- Break tracking
+
+### v2.0 — Future
 - BLE passive detection (no tap needed)
-- Clock-out tracking (hours, not just days)
-- Multiple van support
-- GPS tracking (GY-NEO6MV2)
-- RTC module for accurate offline time
+- GPS tracking
+- Local server sync (MQTT)
 - Mobile app
-- Admin password protection
-- OTA firmware updates
+- LoRa for multi-vehicle
 
 ---
 

@@ -465,12 +465,12 @@ body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-heig
 </style>
 </head>
 <body>
-<div class="hdr"><h1>CREWTRACK</h1><p>Smart Attendance & Payroll Tracker</p></div>
+<div class="hdr"><h1>CREWTRACK</h1><p>Attendance Tracker for Work Crews</p></div>
 <div class="nav">
 <button class="active" onclick="st('dash')">Dashboard</button>
 <button onclick="st('wkr')">Workers</button>
 <button onclick="st('att')">Attendance</button>
-<button onclick="st('sal')">Salary</button>
+<button onclick="st('sal')">Summary</button>
 <button onclick="st('add')">+ Add</button>
 <button onclick="st('time')">Time</button>
 </div>
@@ -492,7 +492,7 @@ body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-heig
 <div class="card"><h2>Attendance History</h2><ul class="wl" id="al"></ul></div>
 </div>
 <div id="t-sal" class="tc">
-<div class="card"><h2>Monthly Salary</h2><ul class="wl" id="sl"></ul></div>
+<div class="card"><h2>Monthly Summary</h2><ul class="wl" id="sl"></ul></div>
 <div style="text-align:center;margin-top:12px"><button class="btn bp" onclick="dlCSV()">Download CSV</button></div>
 </div>
 <div id="t-add" class="tc">
