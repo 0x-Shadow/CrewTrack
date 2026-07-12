@@ -48,6 +48,11 @@
 
 Small businesses with temporary workers track attendance on paper or from memory. At month-end, nobody remembers the exact numbers.
 
+**CrewTrack also works as:**
+- 🔥 **Fire register** — know who's on-site at any time
+- 🚐 **Crew tracker** — who boarded the van this morning
+- 📋 **Site safety log** — proof of attendance for contractors
+
 ## The Solution
 
 **CrewTrack** is a standalone device. Every assistant has an RFID card. Every morning, tap each card before leaving for work. The device handles the rest.
@@ -82,7 +87,7 @@ Small businesses with temporary workers track attendance on paper or from memory
 | **Monthly Salary** | Days worked × daily wage. Automatic. |
 | **CSV Export** | Download full attendance history. |
 | **Search & Filter** | Find any worker by name or UID. |
-| **NTP Time Sync** | Accurate timestamps without RTC module. |
+| **Manual Time Set** | Set clock from dashboard when no internet available. |
 
 ---
 
@@ -237,24 +242,34 @@ Connect to the device's WiFi and open `192.168.4.1`:
 - CSV export
 - Duplicate scan detection
 - Search & filter workers
-- NTP time synchronization
 
 ### 🔄 In Progress
 - Hardware integration testing
 - Reliable SD card detection
+- **Manual time set** via dashboard (NTP unavailable in AP mode)
 - Power management (car USB / battery)
 - Enclosure design
 
-### 🔲 Planned
+### 🔲 Planned — Storage
+- **FRAM module** (FM24C256) — unlimited writes, non-volatile, replaces SD for critical data
+- **LittleFS** — ESP32 internal flash as SD fallback (100k writes)
+- **Optional WiFi station mode** — sync attendance to remote DB (Postgres/SQLite) when internet available
+- **LoRa mesh** (SX1262) — off-grid sync between multiple devices
+
+### 🔲 Planned — Interface
+- **BLE passive detection** — employees wear BLE beacons, auto-registered, no tap needed
+- **Fire register mode** — dashboard shows who's on-site in real-time
+- **Clock-out tracking** — track hours, not just days
+- OTA firmware updates
+- Multi-language support
+
+### 🔲 Planned — Other
 - GPS tracking (GY-NEO6MV2)
 - RTC module for offline time
 - Multiple vehicle support
-- Cloud backup
 - Mobile app (React Native)
 - Admin login / password protection
 - PDF report generation
-- OTA firmware updates
-- Multi-language support
 
 ---
 
