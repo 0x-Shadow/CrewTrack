@@ -1,0 +1,72 @@
+name: Bug Report
+description: Report a bug or issue
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting a bug. Please fill in the details below.
+
+  - type: input
+    id: board
+    attributes:
+      label: ESP32 Board
+      description: Which ESP32 board are you using?
+      placeholder: "ESP32 DevKit V1"
+    validations:
+      required: true
+
+  - type: input
+    id: ide-version
+    attributes:
+      label: Arduino IDE Version
+      placeholder: "2.3.4"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      description: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: serial
+    attributes:
+      label: Serial Monitor Output
+      description: Paste the full serial output
+      render: text
+
+  - type: textarea
+    id: wiring
+    attributes:
+      label: Wiring
+      description: List your pin connections
+      placeholder: |
+        RC522 SS -> GPIO 5
+        RC522 RST -> GPIO 22
+        LCD CS -> GPIO 15
+        ...
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which component?
+      options:
+        - RFID Reader
+        - LCD Display
+        - SD Card
+        - Buzzer
+        - WiFi Dashboard
+        - General
+    validations:
+      required: true

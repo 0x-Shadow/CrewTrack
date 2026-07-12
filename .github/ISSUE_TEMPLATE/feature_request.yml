@@ -1,0 +1,46 @@
+name: Feature Request
+description: Suggest a new feature
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Describe the feature you'd like to see added.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve?
+      description: Why is this feature needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: How should it work?
+      description: Describe your ideal solution
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area?
+      options:
+        - Firmware
+        - Web Dashboard
+        - Hardware
+        - Documentation
+        - Mobile App
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Would you help implement this?
+      options:
+        - label: I can write code for this
+        - label: I can test this on hardware
+        - label: I can help with documentation
