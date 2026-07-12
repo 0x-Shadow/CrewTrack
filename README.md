@@ -63,6 +63,7 @@ No internet required. No cloud. No subscription. Just tap and go.
 | **CSV Export** | Download full attendance history. |
 | **Search & Filter** | Find any worker by name or UID. |
 | **Manual Time Set** | Set clock from dashboard (no internet needed). |
+| **Admin Protection** | Write operations require password. |
 
 ---
 
@@ -164,16 +165,21 @@ Open `CrewTrack.ino` → **ESP32 Dev Module** → Upload
 
 ### 6. Connect
 1. Power on device
-2. Connect phone to WiFi: **`CrewTrack`** / **`12345678`**
+2. Connect phone to device WiFi (check serial monitor for SSID/password)
 3. Open browser: **`192.168.4.1`**
-4. Set date/time on Time tab (no internet available)
-5. Add workers, scan cards, done
+4. Set date/time on Time tab
+5. Add workers (admin password required), scan cards, done
+
+**Default admin password:** `admin123` — change it in the source code before uploading.
 
 ---
 
 ## Web Dashboard
 
 Connect to the device's WiFi and open `192.168.4.1`:
+
+**Read-only** (no password): Dashboard, Workers, Attendance
+**Write operations** (password required): Add/Edit/Delete workers, Set time, View salary
 
 ```
 ┌──────────────────────────────────────────┐

@@ -19,7 +19,13 @@
 // ======================== CONFIG ========================
 #define WIFI_SSID       "CrewTrack"
 #define WIFI_PASSWORD   "12345678"
+#define ADMIN_PASSWORD  "admin123"
 #define MAX_EMPLOYEES   50
+#define MAX_NAME_LEN    32
+#define MAX_UID_LEN     16
+#define MAX_PHONE_LEN   20
+#define MAX_WAGE        999.99f
+#define MAX_JSON_BODY   1024
 #define SCREEN_READY        0
 #define SCREEN_SUCCESS      1
 #define SCREEN_DUPLICATE    2
@@ -51,6 +57,49 @@ int employeeCount = 0;
 bool sdReady = false;
 bool timeSet = false;
 unsigned long lastScanTime = 0;
+
+// ======================== SECURITY ========================
+bool checkAdmin() {
+    String auth = server->header("X-Admin");
+    return auth == ADMIN_PASSWORD;
+}
+
+String sanitizeUID(String uid) {
+    String clean = "";
+    for (unsigned int i = 0; i < uid.length() && i < MAX_UID_LEN; i++) {
+        char c = uid[i];
+        if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
+            clean += c;
+        }
+    }
+    return clean;
+}
+
+String sanitizeName(String name) {
+    String clean = "";
+    for (unsigned int i = 0; i < name.length() && i < MAX_NAME_LEN; i++) {
+        char c = name[i];
+        if (c == ',' || c == '"' || c == '\n' || c == '\r' || c == '<' || c == '>') continue;
+        clean += c;
+    }
+    clean.trim();
+    return clean;
+}
+
+String sanitizePhone(String phone) {
+    String clean = "";
+    for (unsigned int i = 0; i < phone.length() && i < MAX_PHONE_LEN; i++) {
+        char c = phone[i];
+        if ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == ' ') {
+            clean += c;
+        }
+    }
+    return clean;
+}
+
+bool validateBody(String body) {
+    return body.length() > 0 && body.length() <= MAX_JSON_BODY;
+}
 
 // ======================== RFID ========================
 String rfidScan() {
@@ -524,9 +573,12 @@ body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-heig
 <div id="toast" class="toast" style="display:none"></div>
 <script>
 let AW=[];
+let AP='';
 function st(t){document.querySelectorAll('.tc').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('t-'+t).classList.add('active');document.querySelectorAll('.nav button').forEach(b=>{if(b.textContent.toLowerCase().includes(t)||(t==='add'&&b.textContent.includes('+')))b.classList.add('active')});if(t==='dash')ld();if(t==='wkr')lw();if(t==='att')la();if(t==='sal')ls();if(t==='time')lt();}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
 function api(u,o){return fetch(u,o).then(r=>r.json());}
+function ah(h){h=h||{};h['X-Admin']=AP;return h;}
+function ga(){if(!AP){var p=prompt('Admin password:');if(p)AP=p;else{toast('Password required');return false;}}return true;}
 function ld(){
 api('/api/dashboard').then(d=>{document.getElementById('tc').textContent=d.todayCount||0;document.getElementById('te').textContent=d.totalEmployees||0;document.getElementById('lt').textContent=d.lastScanTime||'--:--';});
 api('/api/today').then(d=>{var l=document.getElementById('tl');l.innerHTML='';(d.records||[]).reverse().forEach(r=>{l.innerHTML+='<li class="wi"><div><span class="wn">'+r.name+'</span><div class="wm">'+r.uid+'</div></div><span class="wm">'+r.time+'</span></li>';});});
@@ -535,13 +587,13 @@ function lw(){api('/api/employees').then(d=>{AW=d;rw(d);});}
 function rw(l){var e=document.getElementById('wl');e.innerHTML='';l.forEach(w=>{e.innerHTML+='<li class="wi"><div><span class="wn">'+w.name+'</span><div class="wm">'+w.uid+' | '+w.wage+'E/day | '+w.daysWorked+' days</div></div><button class="btn bs bp" onclick="eu(\''+w.uid+'\',\''+w.name+'\','+w.wage+',\''+w.phone+'\')">Edit</button></li>';});}
 function fw(q){q=q.toLowerCase();rw(AW.filter(w=>w.name.toLowerCase().includes(q)||w.uid.toLowerCase().includes(q)));}
 function eu(uid,n,w,p){document.getElementById('ec').style.display='block';document.getElementById('eu').value=uid;document.getElementById('en').value=n;document.getElementById('ew').value=w;document.getElementById('ep').value=p||'';document.getElementById('t-add').scrollIntoView({behavior:'smooth'});}
-function ae(){var u=document.getElementById('nu').value.trim(),n=document.getElementById('nn').value.trim(),w=parseFloat(document.getElementById('nw').value)||50,p=document.getElementById('np').value.trim();if(!u||!n){toast('Enter UID and name');return;}api('/api/employees/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:u,name:n,wage:w,phone:p})}).then(d=>{if(d.ok){toast('Added');document.getElementById('nu').value='';document.getElementById('nn').value='';document.getElementById('np').value='';}else toast('Error');});}
-function ue(){var u=document.getElementById('eu').value,n=document.getElementById('en').value,w=parseFloat(document.getElementById('ew').value),p=document.getElementById('ep').value;api('/api/employees/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:u,name:n,wage:w,phone:p})}).then(d=>{if(d.ok){toast('Updated');document.getElementById('ec').style.display='none';lw();}});}
-function re(){var u=document.getElementById('eu').value;if(!confirm('Delete?'))return;api('/api/employees/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:u})}).then(d=>{if(d.ok){toast('Deleted');document.getElementById('ec').style.display='none';lw();}});}
+function ae(){if(!ga())return;var u=document.getElementById('nu').value.trim(),n=document.getElementById('nn').value.trim(),w=parseFloat(document.getElementById('nw').value)||50,p=document.getElementById('np').value.trim();if(!u||!n){toast('Enter UID and name');return;}api('/api/employees/add',{method:'POST',headers:ah({'Content-Type':'application/json'}),body:JSON.stringify({uid:u,name:n,wage:w,phone:p})}).then(d=>{if(d.ok){toast('Added');document.getElementById('nu').value='';document.getElementById('nn').value='';document.getElementById('np').value='';}else if(d.error==='Unauthorized'){AP='';toast('Wrong password');}else toast('Error');});}
+function ue(){if(!ga())return;var u=document.getElementById('eu').value,n=document.getElementById('en').value,w=parseFloat(document.getElementById('ew').value),p=document.getElementById('ep').value;api('/api/employees/update',{method:'POST',headers:ah({'Content-Type':'application/json'}),body:JSON.stringify({uid:u,name:n,wage:w,phone:p})}).then(d=>{if(d.ok){toast('Updated');document.getElementById('ec').style.display='none';lw();}else if(d.error==='Unauthorized'){AP='';toast('Wrong password');}});}
+function re(){if(!ga())return;var u=document.getElementById('eu').value;if(!confirm('Delete?'))return;api('/api/employees/remove',{method:'POST',headers:ah({'Content-Type':'application/json'}),body:JSON.stringify({uid:u})}).then(d=>{if(d.ok){toast('Deleted');document.getElementById('ec').style.display='none';lw();}else if(d.error==='Unauthorized'){AP='';toast('Wrong password');}});}
 function la(){api('/api/attendance').then(d=>{var l=document.getElementById('al');l.innerHTML='';(d||[]).reverse().forEach(r=>{l.innerHTML+='<li class="wi"><div><span class="wn">'+r.name+'</span><div class="wm">'+r.uid+'</div></div><span class="wm">'+r.date+' '+r.time+'</span></li>';});});}
-function ls(){var now=new Date();api('/api/monthly',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({month:now.getMonth()+1,year:now.getFullYear()})}).then(d=>{var l=document.getElementById('sl'),tot=0;l.innerHTML='';d.forEach(s=>{tot+=s.salary;var p=s.days>0?Math.min((s.days/22)*100,100):0;l.innerHTML+='<li class="wi" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between"><span class="wn">'+s.name+'</span><span class="ws">'+s.salary.toFixed(2)+'E</span></div><div class="wm">'+s.days+' days x '+s.wage+'E</div><div class="bar"><div class="bf" style="width:'+p+'%"></div></div></li>';});l.innerHTML+='<li class="wi" style="border-top:2px solid #10b981"><span class="wn">TOTAL</span><span class="ws" style="font-size:1.2rem">'+tot.toFixed(2)+'E</span></li>';});}
+function ls(){if(!ga())return;var now=new Date();api('/api/monthly',{method:'POST',headers:ah({'Content-Type':'application/json'}),body:JSON.stringify({month:now.getMonth()+1,year:now.getFullYear()})}).then(d=>{if(d.error==='Unauthorized'){AP='';toast('Wrong password');return;}var l=document.getElementById('sl'),tot=0;l.innerHTML='';d.forEach(s=>{tot+=s.salary;var p=s.days>0?Math.min((s.days/22)*100,100):0;l.innerHTML+='<li class="wi" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between"><span class="wn">'+s.name+'</span><span class="ws">'+s.salary.toFixed(2)+'E</span></div><div class="wm">'+s.days+' days x '+s.wage+'E</div><div class="bar"><div class="bf" style="width:'+p+'%"></div></div></li>';});l.innerHTML+='<li class="wi" style="border-top:2px solid #10b981"><span class="wn">TOTAL</span><span class="ws" style="font-size:1.2rem">'+tot.toFixed(2)+'E</span></li>';});}
 function dlCSV(){window.open('/api/export/csv','_blank');}
-function settime(){var d=parseInt(document.getElementById('td').value),m=parseInt(document.getElementById('tm').value),y=parseInt(document.getElementById('ty').value),h=parseInt(document.getElementById('th').value),mi=parseInt(document.getElementById('tmi').value);if(!d||!m||!y){toast('Fill date fields');return;}api('/api/settime',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day:d,month:m,year:y,hour:h||0,minute:mi||0})}).then(r=>{if(r.ok)toast('Time: '+r.date+' '+r.time);else toast('Error: '+r.error);});}
+function settime(){if(!ga())return;var d=parseInt(document.getElementById('td').value),m=parseInt(document.getElementById('tm').value),y=parseInt(document.getElementById('ty').value),h=parseInt(document.getElementById('th').value),mi=parseInt(document.getElementById('tmi').value);if(!d||!m||!y){toast('Fill date fields');return;}api('/api/settime',{method:'POST',headers:ah({'Content-Type':'application/json'}),body:JSON.stringify({day:d,month:m,year:y,hour:h||0,minute:mi||0})}).then(r=>{if(r.ok)toast('Time: '+r.date+' '+r.time);else if(r.error==='Unauthorized'){AP='';toast('Wrong password');}else toast('Error: '+r.error);});}
 function lt(){api('/api/status').then(d=>{if(d.timeSet){var p=d.date.split('_');document.getElementById('td').value=parseInt(p[2]);document.getElementById('tm').value=parseInt(p[1]);document.getElementById('ty').value=parseInt(p[0]);var t=d.time.split(':');document.getElementById('th').value=parseInt(t[0]);document.getElementById('tmi').value=parseInt(t[1]);}else{var n=new Date();document.getElementById('td').value=n.getDate();document.getElementById('tm').value=n.getMonth()+1;document.getElementById('ty').value=n.getFullYear();document.getElementById('th').value=n.getHours();document.getElementById('tmi').value=n.getMinutes();}});}
 ld();
 </script>
@@ -570,7 +622,14 @@ void setupWebServer() {
 }
 
 void handleRoot() {
+    server->sendHeader("X-Content-Type-Options", "nosniff");
     server->send_P(200, "text/html", PAGE_HTML);
+}
+
+void sendJSON(int code, String json) {
+    server->sendHeader("X-Content-Type-Options", "nosniff");
+    server->sendHeader("Access-Control-Allow-Origin", "*");
+    server->send(code, "application/json", json);
 }
 
 void handleAPIDashboard() {
@@ -582,7 +641,7 @@ void handleAPIDashboard() {
     doc["date"] = currentDate;
     String out;
     serializeJson(doc, out);
-    server->send(200, "application/json", out);
+    sendJSON(200, out);
 }
 
 void handleAPIEmployees() {
@@ -604,57 +663,57 @@ void handleAPIEmployees() {
     }
     String out;
     serializeJson(doc, out);
-    server->send(200, "application/json", out);
+    sendJSON(200, out);
 }
 
 void handleAPIAddEmployee() {
+    if (!checkAdmin()) { sendJSON(401, "{\"error\":\"Unauthorized\"}"); return; }
     String body = server->arg("plain");
+    if (!validateBody(body)) { sendJSON(400, "{\"error\":\"Body too large\"}"); return; }
     JsonDocument doc;
-    if (deserializeJson(doc, body)) {
-        server->send(400, "application/json", "{\"error\":\"Bad JSON\"}");
-        return;
-    }
-    String uid = doc["uid"] | "";
-    String name = doc["name"] | "";
+    if (deserializeJson(doc, body)) { sendJSON(400, "{\"error\":\"Bad JSON\"}"); return; }
+    String uid = sanitizeUID(doc["uid"] | "");
+    String name = sanitizeName(doc["name"] | "");
     float wage = doc["wage"] | 50.0f;
-    String phone = doc["phone"] | "";
-    if (uid.length() == 0 || name.length() == 0) {
-        server->send(400, "application/json", "{\"error\":\"Missing fields\"}");
-        return;
-    }
-    if (uid.indexOf(',') >= 0 || uid.indexOf('\n') >= 0 || uid.indexOf('"') >= 0) {
-        server->send(400, "application/json", "{\"error\":\"Invalid UID\"}");
-        return;
-    }
+    String phone = sanitizePhone(doc["phone"] | "");
+    if (uid.length() == 0 || name.length() == 0) { sendJSON(400, "{\"error\":\"Missing fields\"}"); return; }
+    if (wage < 0 || wage > MAX_WAGE) { sendJSON(400, "{\"error\":\"Invalid wage\"}"); return; }
     if (addEmployee(uid, name, wage, phone))
-        server->send(200, "application/json", "{\"ok\":true}");
+        sendJSON(200, "{\"ok\":true}");
     else
-        server->send(500, "application/json", "{\"error\":\"Failed\"}");
+        sendJSON(500, "{\"error\":\"Failed\"}");
 }
 
 void handleAPIRemoveEmployee() {
+    if (!checkAdmin()) { sendJSON(401, "{\"error\":\"Unauthorized\"}"); return; }
     String body = server->arg("plain");
+    if (!validateBody(body)) { sendJSON(400, "{\"error\":\"Body too large\"}"); return; }
     JsonDocument doc;
-    deserializeJson(doc, body);
-    String uid = doc["uid"] | "";
+    if (deserializeJson(doc, body)) { sendJSON(400, "{\"error\":\"Bad JSON\"}"); return; }
+    String uid = sanitizeUID(doc["uid"] | "");
+    if (uid.length() == 0) { sendJSON(400, "{\"error\":\"Missing UID\"}"); return; }
     if (removeEmployee(uid))
-        server->send(200, "application/json", "{\"ok\":true}");
+        sendJSON(200, "{\"ok\":true}");
     else
-        server->send(500, "application/json", "{\"error\":\"Failed\"}");
+        sendJSON(500, "{\"error\":\"Failed\"}");
 }
 
 void handleAPIUpdateEmployee() {
+    if (!checkAdmin()) { sendJSON(401, "{\"error\":\"Unauthorized\"}"); return; }
     String body = server->arg("plain");
+    if (!validateBody(body)) { sendJSON(400, "{\"error\":\"Body too large\"}"); return; }
     JsonDocument doc;
-    deserializeJson(doc, body);
-    String uid = doc["uid"] | "";
-    String name = doc["name"] | "";
+    if (deserializeJson(doc, body)) { sendJSON(400, "{\"error\":\"Bad JSON\"}"); return; }
+    String uid = sanitizeUID(doc["uid"] | "");
+    String name = sanitizeName(doc["name"] | "");
     float wage = doc["wage"] | 50.0f;
-    String phone = doc["phone"] | "";
+    String phone = sanitizePhone(doc["phone"] | "");
+    if (uid.length() == 0 || name.length() == 0) { sendJSON(400, "{\"error\":\"Missing fields\"}"); return; }
+    if (wage < 0 || wage > MAX_WAGE) { sendJSON(400, "{\"error\":\"Invalid wage\"}"); return; }
     if (updateEmployee(uid, name, wage, phone))
-        server->send(200, "application/json", "{\"ok\":true}");
+        sendJSON(200, "{\"ok\":true}");
     else
-        server->send(500, "application/json", "{\"error\":\"Failed\"}");
+        sendJSON(500, "{\"error\":\"Failed\"}");
 }
 
 void handleAPIToday() {
@@ -683,13 +742,15 @@ void handleAPIToday() {
     }
     String out;
     serializeJson(doc, out);
-    server->send(200, "application/json", out);
+    sendJSON(200, out);
 }
 
 void handleAPIMonthly() {
+    if (!checkAdmin()) { sendJSON(401, "{\"error\":\"Unauthorized\"}"); return; }
     String body = server->arg("plain");
+    if (!validateBody(body)) { sendJSON(400, "{\"error\":\"Body too large\"}"); return; }
     JsonDocument doc;
-    deserializeJson(doc, body);
+    if (deserializeJson(doc, body)) { sendJSON(400, "{\"error\":\"Bad JSON\"}"); return; }
     int month = doc["month"] | 7;
     int year = doc["year"] | 2026;
 
@@ -707,7 +768,7 @@ void handleAPIMonthly() {
     }
     String out;
     serializeJson(result, out);
-    server->send(200, "application/json", out);
+    sendJSON(200, out);
 }
 
 void handleAPIAttendance() {
@@ -750,7 +811,7 @@ void handleAPIAttendance() {
     }
     String out;
     serializeJson(doc, out);
-    server->send(200, "application/json", out);
+    sendJSON(200, out);
 }
 
 void handleAPIExportCSV() {
@@ -778,7 +839,9 @@ void handleAPIExportCSV() {
                         String uid = line.substring(0, c);
                         String time = line.substring(c + 1);
                         Employee *emp = findByUID(uid);
-                        csv += uid + "," + (emp ? emp->name : "Unknown") + "," + date + "," + time + "," + String(emp ? emp->dailyWage : 0) + "\n";
+                        String safeName = emp ? sanitizeName(emp->name) : "Unknown";
+                        float wage = emp ? emp->dailyWage : 0;
+                        csv += uid + "," + safeName + "," + date + "," + time + "," + String(wage, 2) + "\n";
                     }
                 }
             }
@@ -786,16 +849,16 @@ void handleAPIExportCSV() {
         }
     }
     server->sendHeader("Content-Disposition", "attachment; filename=attendance.csv");
+    server->sendHeader("X-Content-Type-Options", "nosniff");
     server->send(200, "text/csv", csv);
 }
 
 void handleAPISetTime() {
+    if (!checkAdmin()) { sendJSON(401, "{\"error\":\"Unauthorized\"}"); return; }
     String body = server->arg("plain");
+    if (!validateBody(body)) { sendJSON(400, "{\"error\":\"Body too large\"}"); return; }
     JsonDocument doc;
-    if (deserializeJson(doc, body)) {
-        server->send(400, "application/json", "{\"error\":\"Bad JSON\"}");
-        return;
-    }
+    if (deserializeJson(doc, body)) { sendJSON(400, "{\"error\":\"Bad JSON\"}"); return; }
     int day = doc["day"] | 1;
     int month = doc["month"] | 1;
     int year = doc["year"] | 2026;
@@ -803,7 +866,11 @@ void handleAPISetTime() {
     int minute = doc["minute"] | 0;
 
     if (month < 1 || month > 12 || day < 1 || day > 31 || year < 2024 || year > 2099) {
-        server->send(400, "application/json", "{\"error\":\"Invalid date\"}");
+        sendJSON(400, "{\"error\":\"Invalid date\"}");
+        return;
+    }
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+        sendJSON(400, "{\"error\":\"Invalid time\"}");
         return;
     }
 
@@ -824,7 +891,7 @@ void handleAPISetTime() {
     resp["time"] = currentTime;
     String out;
     serializeJson(resp, out);
-    server->send(200, "application/json", out);
+    sendJSON(200, out);
 
     Serial.print("Time set: ");
     Serial.print(currentDate);
@@ -843,7 +910,7 @@ void handleAPIStatus() {
     doc["uptime"] = millis() / 1000;
     String out;
     serializeJson(doc, out);
-    server->send(200, "application/json", out);
+    sendJSON(200, out);
 }
 
 // ======================== SETUP ========================
