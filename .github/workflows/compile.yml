@@ -7,8 +7,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Arduino CLI
-        uses: arduino/github-action-setup-arduino-cli@v2
+      - name: Install Arduino CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+          echo "$PWD/bin" >> $GITHUB_PATH
 
       - name: Configure ESP32
         run: |
@@ -25,8 +27,8 @@ jobs:
 
       - name: Configure TFT_eSPI
         run: |
-          cp TFT_eSPI_User_Setup.h "$HOME/Arduino/libraries/TFT_eSPI/User_Setup.h"
+          cp CrewTrack/TFT_eSPI_User_Setup.h "$HOME/Arduino/libraries/TFT_eSPI/User_Setup.h"
 
       - name: Compile
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32dev --verbose ./CrewTrack.ino
+          arduino-cli compile --fqbn esp32:esp32:esp32dev --verbose CrewTrack/CrewTrack.ino
