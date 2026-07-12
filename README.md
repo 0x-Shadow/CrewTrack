@@ -92,12 +92,14 @@ Total cost: **~€40-50** (first build, includes shipping)
 
 | Component | Model | Cost |
 |-----------|-------|------|
-| Microcontroller | ESP32 DevKit V1 | €3-5 |
-| RFID Reader | RC522 MFRC522 | €2-3 |
-| Display | ST7789V 2" IPS LCD | €4-6 |
-| Storage | MicroSD Module | €1-2 |
+| Microcontroller | ESP32 DevKit V1 | €5-8 |
+| RFID Reader | RC522 MFRC522 | €3-5 |
+| Display | ST7789V 2" IPS LCD | €6-10 |
+| Storage | MicroSD Module | €2-3 |
 | Feedback | Active Buzzer 5V | €0.50 |
-| Cards | MIFARE Classic 1K | €0.10 each |
+| Cards | MIFARE Classic 1K (x10) | €2 |
+| MicroSD Card | Any 1GB+ FAT32 | €3-5 |
+| Breadboard + Wires | — | €5 |
 
 See [BOM.md](BOM.md) for full shopping list with links.
 
